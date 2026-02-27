@@ -8,6 +8,22 @@ const fmt = new Intl.NumberFormat('ko-KR');
 type FeeMode = 'free' | 'manual';
 type TxType = 'income' | 'expense' | 'transfer';
 
+type CategoryOption = {
+  label: string;
+  icon: string;
+};
+
+type CategoryMap = Record<TxType, CategoryOption[]>;
+
+type AddTxDraft = {
+  txType: TxType;
+  categories: Record<TxType, string>;
+  merchant: string;
+  memoTags: string;
+  excludeFromBudget: boolean;
+  addFixedExpense: boolean;
+};
+
 type TxEditDraft = {
   cardId: string;
   category: string;
@@ -16,6 +32,46 @@ type TxEditDraft = {
   feeMode: FeeMode;
   feeRate: string;
   memo: string;
+};
+
+const CATEGORY_OPTIONS: CategoryMap = {
+  income: [
+    { icon: '💼', label: '급여' },
+    { icon: '🎁', label: '상여' },
+    { icon: '🧧', label: '용돈' },
+    { icon: '🏦', label: '금융수입' },
+    { icon: '🧾', label: '기타' },
+  ],
+  expense: [
+    { icon: '🍚', label: '식비' },
+    { icon: '☕️', label: '카페' },
+    { icon: '🍺', label: '술유흥' },
+    { icon: '🧺', label: '생활' },
+    { icon: '🛒', label: '온라인쇼핑' },
+    { icon: '👕', label: '패션' },
+    { icon: '💄', label: '뷰티' },
+    { icon: '🚌', label: '교통' },
+    { icon: '🚗', label: '자동차' },
+    { icon: '🏠', label: '주거통신' },
+    { icon: '🏥', label: '의료건강' },
+    { icon: '💳', label: '금융' },
+    { icon: '🎬', label: '문화여가' },
+    { icon: '✈️', label: '여행숙박' },
+    { icon: '📚', label: '교육학습' },
+    { icon: '🧒', label: '자녀육아' },
+    { icon: '🐶', label: '반려동물' },
+    { icon: '🎀', label: '경조선물' },
+  ],
+  transfer: [
+    { icon: '🔁', label: '내계좌이체' },
+    { icon: '🏧', label: '이체' },
+    { icon: '💳', label: '카드대금' },
+    { icon: '🐷', label: '저축' },
+    { icon: '💵', label: '현금' },
+    { icon: '📈', label: '투자' },
+    { icon: '🏦', label: '대출' },
+    { icon: '🛡️', label: '보험' },
+  ],
 };
 
 function formatDateTimeForRow(now: Date): string {
@@ -34,13 +90,21 @@ export function TransactionsPage() {
   const [searchText, setSearchText] = useState('');
   const [period, setPeriod] = useState<SmartFilterPeriod>('all');
   const [addTxOpen, setAddTxOpen] = useState(false);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [amountInputMode, setAmountInputMode] = useState(false);
   const [amountText, setAmountText] = useState('0');
-  const [txType, setTxType] = useState<TxType>('expense');
-  const [merchant, setMerchant] = useState('');
-  const [memoTags, setMemoTags] = useState('');
-  const [excludeFromBudget, setExcludeFromBudget] = useState(false);
-  const [addFixedExpense, setAddFixedExpense] = useState(false);
+  const [addTxDraft, setAddTxDraft] = useState<AddTxDraft>({
+    txType: 'expense',
+    categories: {
+      income: '',
+      expense: '',
+      transfer: '',
+    },
+    merchant: '',
+    memoTags: '',
+    excludeFromBudget: false,
+    addFixedExpense: false,
+  });
   const [dateTimeText] = useState(formatDateTimeForRow(new Date()));
 
   const rows = useMemo(() => {
@@ -109,7 +173,19 @@ export function TransactionsPage() {
 
   function closeAddTx() {
     setAddTxOpen(false);
+    setCategoryPickerOpen(false);
     setAmountInputMode(false);
+  }
+
+  function selectCategory(type: TxType, category: string) {
+    setAddTxDraft(prev => ({
+      ...prev,
+      categories: {
+        ...prev.categories,
+        [type]: category,
+      },
+    }));
+    setCategoryPickerOpen(false);
   }
 
   function amountDisplayText() {
@@ -307,20 +383,20 @@ export function TransactionsPage() {
             </div>
 
             <div className="addtx-segment" role="tablist" aria-label="거래 분류">
-              <button className={`tab ${txType === 'income' ? 'active' : ''}`} onClick={() => setTxType('income')}>수입</button>
-              <button className={`tab ${txType === 'expense' ? 'active' : ''}`} onClick={() => setTxType('expense')}>지출</button>
-              <button className={`tab ${txType === 'transfer' ? 'active' : ''}`} onClick={() => setTxType('transfer')}>이체</button>
+              <button className={`tab ${addTxDraft.txType === 'income' ? 'active' : ''}`} onClick={() => setAddTxDraft(prev => ({ ...prev, txType: 'income' }))}>수입</button>
+              <button className={`tab ${addTxDraft.txType === 'expense' ? 'active' : ''}`} onClick={() => setAddTxDraft(prev => ({ ...prev, txType: 'expense' }))}>지출</button>
+              <button className={`tab ${addTxDraft.txType === 'transfer' ? 'active' : ''}`} onClick={() => setAddTxDraft(prev => ({ ...prev, txType: 'transfer' }))}>이체</button>
             </div>
 
             <div className="addtx-list">
-              <button className="addtx-row" onClick={() => alert('Not implemented')}>
+              <button className="addtx-row" onClick={() => setCategoryPickerOpen(true)}>
                 <span>카테고리</span>
-                <span className="muted">미분류 ›</span>
+                <span className="muted">{addTxDraft.categories[addTxDraft.txType] || '미분류'} ›</span>
               </button>
 
               <label className="addtx-row addtx-input-row">
                 <span>거래처</span>
-                <input value={merchant} onChange={e => setMerchant(e.target.value)} placeholder="입력" />
+                <input value={addTxDraft.merchant} onChange={e => setAddTxDraft(prev => ({ ...prev, merchant: e.target.value }))} placeholder="입력" />
               </label>
 
               <button className="addtx-row" onClick={() => alert('Not implemented')}>
@@ -335,17 +411,17 @@ export function TransactionsPage() {
 
               <label className="addtx-row addtx-input-row">
                 <span>메모·태그</span>
-                <input value={memoTags} onChange={e => setMemoTags(e.target.value)} placeholder="입력" />
+                <input value={addTxDraft.memoTags} onChange={e => setAddTxDraft(prev => ({ ...prev, memoTags: e.target.value }))} placeholder="입력" />
               </label>
 
               <label className="addtx-row addtx-toggle-row">
                 <span>예산에서 제외</span>
-                <input type="checkbox" checked={excludeFromBudget} onChange={e => setExcludeFromBudget(e.target.checked)} />
+                <input type="checkbox" checked={addTxDraft.excludeFromBudget} onChange={e => setAddTxDraft(prev => ({ ...prev, excludeFromBudget: e.target.checked }))} />
               </label>
 
               <label className="addtx-row addtx-toggle-row">
                 <span>고정 지출에 추가</span>
-                <input type="checkbox" checked={addFixedExpense} onChange={e => setAddFixedExpense(e.target.checked)} />
+                <input type="checkbox" checked={addTxDraft.addFixedExpense} onChange={e => setAddTxDraft(prev => ({ ...prev, addFixedExpense: e.target.checked }))} />
               </label>
             </div>
 
@@ -361,6 +437,37 @@ export function TransactionsPage() {
               </button>
             </div>
           </div>
+
+          {categoryPickerOpen && (
+            <div className="category-picker-sheet" role="dialog" aria-label="카테고리 선택">
+              <div className="category-picker-head">
+                <h3>카테고리 선택</h3>
+                <button className="btn" onClick={() => setCategoryPickerOpen(false)} aria-label="닫기">✕</button>
+              </div>
+
+              <div className="addtx-segment" role="tablist" aria-label="카테고리 타입">
+                <button className={`tab ${addTxDraft.txType === 'income' ? 'active' : ''}`} onClick={() => setAddTxDraft(prev => ({ ...prev, txType: 'income' }))}>수입</button>
+                <button className={`tab ${addTxDraft.txType === 'expense' ? 'active' : ''}`} onClick={() => setAddTxDraft(prev => ({ ...prev, txType: 'expense' }))}>지출</button>
+                <button className={`tab ${addTxDraft.txType === 'transfer' ? 'active' : ''}`} onClick={() => setAddTxDraft(prev => ({ ...prev, txType: 'transfer' }))}>이체</button>
+              </div>
+
+              <div className="category-grid">
+                {CATEGORY_OPTIONS[addTxDraft.txType].map(option => {
+                  const isSelected = addTxDraft.categories[addTxDraft.txType] === option.label;
+                  return (
+                    <button
+                      key={`${addTxDraft.txType}-${option.label}`}
+                      className={`category-grid-item ${isSelected ? 'selected' : ''}`}
+                      onClick={() => selectCategory(addTxDraft.txType, option.label)}
+                    >
+                      <span className="icon" aria-hidden>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
