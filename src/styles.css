@@ -368,3 +368,35 @@ tr:last-child td{border-bottom:none}
   .bottom-nav{padding-bottom:env(safe-area-inset-bottom)}
   .app-body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 }
+
+/* SmartFilterBar */
+.smart-filter-wrap{
+  position: sticky;
+  top: 64px;
+  z-index: 4;
+  padding: 4px 0;
+  background: rgba(18, 26, 51, .92);
+}
+.smart-filter-bar{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.smart-filter-bar input,
+.smart-filter-bar .btn{
+  min-height: 44px;
+}
+.smart-filter-period{
+  display:flex;
+  gap:8px;
+  overflow:auto;
+}
+.smart-filter-period .btn{
+  white-space: nowrap;
+}
+@media (min-width: 920px){
+  .smart-filter-bar{
+    grid-template-columns: minmax(220px, 1fr) auto auto;
+    align-items: center;
+  }
+}
