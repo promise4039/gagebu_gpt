@@ -11,6 +11,11 @@
 - 데이터 저장: IndexedDB + WebCrypto(AES-GCM) 레코드 단위 암호화
 - CSP: connect-src 'none' (네트워크 전송 차단)
 
+
+## Roadmap / SSOT
+- Master plan (SSOT v3): [`docs/banksalad_plan_master_v3.md`](docs/banksalad_plan_master_v3.md)
+- Backlog & PR sequence: [`docs/backlog.md`](docs/backlog.md)
+
 ## 실행
 ```bash
 npm install
