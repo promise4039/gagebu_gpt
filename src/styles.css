@@ -301,18 +301,33 @@ tr:last-child td{border-bottom:none}
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  align-items: stretch;
+}
+
+.bottom-nav .primary-tabs{
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
 }
 
 .bottom-nav .tab{
   flex: 1;
+  min-width: 78px;
   text-align: center;
   border-radius: 14px;
   padding: 10px 8px;
   font-size: 12px;
 }
 
+.bottom-nav .more-tab{
+  flex: 0 0 auto;
+  min-width: 84px;
+}
+
 @media (min-width: 900px){
   .bottom-nav .nav-inner{ justify-content: center; }
+  .bottom-nav .primary-tabs{ max-width: 860px; }
   .bottom-nav .tab{ max-width: 220px; }
 }
 
