@@ -7,6 +7,15 @@ import { SmartFilterBar, SmartFilterPeriod } from '../components/SmartFilterBar'
 const fmt = new Intl.NumberFormat('ko-KR');
 type FeeMode = 'free' | 'manual';
 type TxType = 'income' | 'expense' | 'transfer';
+type PaymentMethodValue = 'cash' | 'check_card' | 'credit_card' | 'bank_transfer' | 'others';
+
+const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentMethodValue; label: string }> = [
+  { value: 'cash', label: '현금' },
+  { value: 'check_card', label: '체크카드' },
+  { value: 'credit_card', label: '신용카드' },
+  { value: 'bank_transfer', label: '계좌이체' },
+  { value: 'others', label: '기타' },
+];
 
 type TxEditDraft = {
   cardId: string;
@@ -42,6 +51,8 @@ export function TransactionsPage() {
   const [excludeFromBudget, setExcludeFromBudget] = useState(false);
   const [addFixedExpense, setAddFixedExpense] = useState(false);
   const [dateTimeText] = useState(formatDateTimeForRow(new Date()));
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>('cash');
+  const [paymentMethodPickerOpen, setPaymentMethodPickerOpen] = useState(false);
 
   const rows = useMemo(() => {
     return [...app.tx].sort((a, b) => b.date.localeCompare(a.date));
@@ -110,6 +121,11 @@ export function TransactionsPage() {
   function closeAddTx() {
     setAddTxOpen(false);
     setAmountInputMode(false);
+    setPaymentMethodPickerOpen(false);
+  }
+
+  function paymentMethodLabel() {
+    return PAYMENT_METHOD_OPTIONS.find(option => option.value === paymentMethod)?.label ?? '선택하세요';
   }
 
   function amountDisplayText() {
@@ -323,9 +339,9 @@ export function TransactionsPage() {
                 <input value={merchant} onChange={e => setMerchant(e.target.value)} placeholder="입력" />
               </label>
 
-              <button className="addtx-row" onClick={() => alert('Not implemented')}>
+              <button className="addtx-row" onClick={() => setPaymentMethodPickerOpen(true)}>
                 <span>결제수단</span>
-                <span className="muted">선택하세요 ›</span>
+                <span className="muted">{paymentMethodLabel()} ›</span>
               </button>
 
               <button className="addtx-row" onClick={() => alert('Not implemented')}>
@@ -361,6 +377,38 @@ export function TransactionsPage() {
               </button>
             </div>
           </div>
+
+          {paymentMethodPickerOpen && (
+            <div className="payment-method-picker-overlay">
+              <div className="payment-method-picker-sheet">
+                <div className="payment-method-picker-head">
+                  <h3>결제수단 선택</h3>
+                  <button className="btn" onClick={() => setPaymentMethodPickerOpen(false)} aria-label="닫기">✕</button>
+                </div>
+
+                <div className="payment-method-picker-list">
+                  {PAYMENT_METHOD_OPTIONS.map(option => {
+                    const isSelected = option.value === paymentMethod;
+                    return (
+                      <button
+                        key={option.value}
+                        className="payment-method-picker-row"
+                        onClick={() => {
+                          setPaymentMethod(option.value);
+                          setPaymentMethodPickerOpen(false);
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        <span className={isSelected ? 'payment-method-picker-check active' : 'payment-method-picker-check'}>
+                          {isSelected ? '✓' : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

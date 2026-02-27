@@ -474,3 +474,52 @@ tr:last-child td{border-bottom:none}
   background: linear-gradient(180deg, rgba(15,20,40,.2), rgba(15,20,40,1) 35%);
 }
 .addtx-save{width:100%;min-height:48px;font-size:16px;font-weight:600;}
+
+/* Add transaction payment method picker v0.2 */
+.payment-method-picker-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(8,10,20,.9);
+  z-index: 70;
+}
+.payment-method-picker-sheet{
+  height: 100%;
+  overflow: auto;
+  background: rgba(15, 20, 40, .98);
+  padding: 16px;
+}
+.payment-method-picker-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.payment-method-picker-head h3{
+  margin:0;
+  font-size:18px;
+}
+.payment-method-picker-list{
+  border:1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.payment-method-picker-row{
+  width:100%;
+  border:0;
+  border-bottom:1px solid var(--line);
+  background: rgba(255,255,255,.02);
+  color: var(--text);
+  padding: 15px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:15px;
+  text-align:left;
+}
+.payment-method-picker-row:last-child{border-bottom:0;}
+.payment-method-picker-check{
+  width:22px;
+  text-align:center;
+  color:transparent;
+}
+.payment-method-picker-check.active{color:var(--good);}
