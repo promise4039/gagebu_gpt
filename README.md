@@ -57,3 +57,10 @@ npm run preview
 
 ## 예산
 - 예산 탭에서 버킷별 월 예산을 편집하고, 거래 내역을 기반으로 예산 대비 실적/소진율을 확인할 수 있음
+
+
+## Roadmap / SSOT
+- SSOT v3 master plan: [`docs/banksalad_plan_master_v3.md`](docs/banksalad_plan_master_v3.md)
+- Backlog + issue bodies: [`docs/backlog.md`](docs/backlog.md)
+- Incremental implementation plan: [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md)
+
