@@ -57,3 +57,13 @@ npm run preview
 
 ## 예산
 - 예산 탭에서 버킷별 월 예산을 편집하고, 거래 내역을 기반으로 예산 대비 실적/소진율을 확인할 수 있음
+
+## Roadmap / SSOT
+- Master plan (SSOT v3): [`docs/banksalad_plan_master_v3.md`](docs/banksalad_plan_master_v3.md)
+- Backlog & PR sequence: [`docs/backlog.md`](docs/backlog.md)
+
+
+## 협업 브랜치/PR 워크플로우
+- 기능 작업은 `feat/<name>` 브랜치에서 진행
+- 원격 반영: `git push -u origin <branch>`
+- GitHub에서 `main` 대상으로 PR 생성 후 리뷰
