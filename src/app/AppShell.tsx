@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { useApp } from './AppContext';
 import { DashboardPage } from '../pages/DashboardPage';
 import { CardsPage } from '../pages/CardsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { LoansPage } from '../pages/LoansPage';
-
-function Tab({ to, label }: { to: string; label: string }) {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => 'tab' + (isActive ? ' active' : '')}
-      style={{ textDecoration: 'none' }}
-    >
-      {label}
-    </NavLink>
-  );
-}
+import { TransactionsPage } from '../pages/TransactionsPage';
+import { AnalyticsPage } from '../pages/AnalyticsPage';
+import { BudgetPage } from '../pages/BudgetPage';
+import { ReconcilePage } from '../pages/ReconcilePage';
+import { MorePage } from '../pages/MorePage';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 export function AppShell() {
   const app = useApp();
@@ -34,6 +28,21 @@ export function AppShell() {
       <div className="app-body">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+
+          <Route path="/plan" element={<BudgetPage />} />
+          <Route path="/budget" element={<BudgetPage />} />
+
+          <Route path="/billing" element={<ReconcilePage />} />
+          <Route path="/reconcile" element={<ReconcilePage />} />
+
+          <Route path="/more" element={<MorePage />} />
+          <Route path="/more/settings" element={<SettingsPage />} />
+          <Route path="/more/cards" element={<CardsPage />} />
+          <Route path="/more/loans" element={<LoansPage />} />
+
           <Route path="/cards" element={<CardsPage />} />
           <Route path="/loans" element={<LoansPage />} />
           <Route path="/settings" element={<SettingsPage />} />
@@ -50,14 +59,7 @@ export function AppShell() {
         ) : null}
       </div>
 
-      <div className="bottom-nav">
-        <div className="nav-inner">
-          <Tab to="/" label="대시보드" />
-          <Tab to="/cards" label="계좌/카드" />
-          <Tab to="/loans" label="대출/카드" />
-          <Tab to="/settings" label="설정" />
-        </div>
-      </div>
+      <BottomTabBar />
     </>
   );
 }
