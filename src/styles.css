@@ -400,3 +400,77 @@ tr:last-child td{border-bottom:none}
     align-items: center;
   }
 }
+
+/* Add transaction form v0.1 */
+.add-tx-fab{
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  font-size: 28px;
+  line-height: 1;
+  border: 1px solid rgba(115,125,255,.55);
+  background: rgba(115,125,255,.35);
+  color: var(--text);
+  cursor: pointer;
+  z-index: 30;
+}
+.addtx-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(8,10,20,.85);
+  z-index: 60;
+}
+.addtx-sheet{
+  height: 100%;
+  overflow: auto;
+  background: rgba(15, 20, 40, .98);
+  padding: 16px;
+  padding-bottom: 110px;
+}
+.addtx-head{display:flex;justify-content:flex-end;}
+.addtx-amount{
+  margin: 10px 0 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+.addtx-amount strong{font-size:40px;line-height:1.1;}
+.addtx-amount input{max-width:260px;font-size:34px;}
+.addtx-pencil{color:var(--muted);}
+.addtx-segment{display:flex;gap:8px;margin-bottom:14px;}
+.addtx-segment .tab{flex:1;text-align:center;}
+.addtx-list{
+  border:1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.addtx-row{
+  width:100%;
+  border:0;
+  border-bottom:1px solid var(--line);
+  background: rgba(255,255,255,.02);
+  color: var(--text);
+  padding: 14px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  font-size:14px;
+  text-align:left;
+}
+.addtx-row:last-child{border-bottom:0;}
+.addtx-input-row input{max-width: 180px;}
+.addtx-toggle-row input{width:auto;}
+.addtx-bottom{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px 16px;
+  background: linear-gradient(180deg, rgba(15,20,40,.2), rgba(15,20,40,1) 35%);
+}
+.addtx-save{width:100%;min-height:48px;font-size:16px;font-weight:600;}
