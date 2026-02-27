@@ -53,6 +53,8 @@ export function TransactionsPage() {
   const [dateTimeText] = useState(formatDateTimeForRow(new Date()));
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodValue>('cash');
   const [paymentMethodPickerOpen, setPaymentMethodPickerOpen] = useState(false);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('미분류');
 
   const rows = useMemo(() => {
     return [...app.tx].sort((a, b) => b.date.localeCompare(a.date));
@@ -122,6 +124,7 @@ export function TransactionsPage() {
     setAddTxOpen(false);
     setAmountInputMode(false);
     setPaymentMethodPickerOpen(false);
+    setCategoryPickerOpen(false);
   }
 
   function paymentMethodLabel() {
@@ -329,9 +332,9 @@ export function TransactionsPage() {
             </div>
 
             <div className="addtx-list">
-              <button className="addtx-row" onClick={() => alert('Not implemented')}>
+              <button className="addtx-row" onClick={() => setCategoryPickerOpen(true)}>
                 <span>카테고리</span>
-                <span className="muted">미분류 ›</span>
+                <span className="muted">{selectedCategory} ›</span>
               </button>
 
               <label className="addtx-row addtx-input-row">
@@ -399,6 +402,38 @@ export function TransactionsPage() {
                         }}
                       >
                         <span>{option.label}</span>
+                        <span className={isSelected ? 'payment-method-picker-check active' : 'payment-method-picker-check'}>
+                          {isSelected ? '✓' : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {categoryPickerOpen && (
+            <div className="payment-method-picker-overlay">
+              <div className="payment-method-picker-sheet">
+                <div className="payment-method-picker-head">
+                  <h3>카테고리 선택</h3>
+                  <button className="btn" onClick={() => setCategoryPickerOpen(false)} aria-label="닫기">✕</button>
+                </div>
+
+                <div className="payment-method-picker-list">
+                  {['미분류', ...app.categories].map(category => {
+                    const isSelected = category === selectedCategory;
+                    return (
+                      <button
+                        key={category}
+                        className="payment-method-picker-row"
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setCategoryPickerOpen(false);
+                        }}
+                      >
+                        <span>{category}</span>
                         <span className={isSelected ? 'payment-method-picker-check active' : 'payment-method-picker-check'}>
                           {isSelected ? '✓' : ''}
                         </span>
