@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useCategories } from '../categories/useCategories';
-import { AddTxDraft } from './types';
+import { AddTxDraft, AddTxPayload } from './types';
 import { CategoryType } from '../categories/types';
 
 const PAYMENT_METHODS = ['현금', '체크카드', '신용카드', '계좌이체', '기타'];
+
+type PickerType = 'category' | 'payment' | 'datetime';
 
 function formatDateTime(date: Date): string {
   const yy = String(date.getFullYear()).slice(-2);
@@ -16,6 +18,35 @@ function formatDateTime(date: Date): string {
   return `${yy}년 ${mm}월 ${dd}일 | ${ampm} ${String(hour12).padStart(2, '0')}:${minute}`;
 }
 
+function parseDateFromISO(dateTimeISO: string): Date {
+  const parsed = new Date(dateTimeISO);
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date();
+  }
+  return parsed;
+}
+
+function buildAddTxPayload(draft: AddTxDraft): AddTxPayload | null {
+  const amount = Number(draft.amountText.replaceAll(',', '').trim());
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  return {
+    txType: draft.txType,
+    amount,
+    merchant: draft.merchant.trim(),
+    paymentMethod: draft.paymentMethod,
+    majorId: draft.majorId,
+    midId: draft.midId,
+    memo: draft.memo.trim(),
+    tags: draft.tags,
+    excludeFromBudget: draft.excludeFromBudget,
+    addFixedExpense: draft.addFixedExpense,
+    dateTimeISO: draft.dateTimeISO,
+  };
+}
+
 function getRecentDates(): Array<{ label: string; value: string }> {
   return Array.from({ length: 14 }, (_, idx) => {
     const d = new Date();
@@ -26,11 +57,17 @@ function getRecentDates(): Array<{ label: string; value: string }> {
   });
 }
 
-export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AddTxSheet({
+  open,
+  onClose,
+  onSaveDraft,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaveDraft?: (payload: AddTxPayload) => void;
+}) {
   const categories = useCategories();
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [dateOpen, setDateOpen] = useState(false);
+  const [activePicker, setActivePicker] = useState<PickerType | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [draft, setDraft] = useState<AddTxDraft>({
     txType: 'expense',
@@ -43,7 +80,7 @@ export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => vo
     tags: [],
     excludeFromBudget: false,
     addFixedExpense: false,
-    dateTime: new Date(),
+    dateTimeISO: new Date().toISOString(),
   });
 
   const majors = categories.majorsByType[draft.txType] ?? [];
@@ -68,7 +105,6 @@ export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => vo
   if (!open) return null;
 
   const dates = getRecentDates();
-  const dateValue = draft.dateTime.toISOString().slice(0, 10);
   const minuteStep = Array.from({ length: 12 }, (_, idx) => String(idx * 5).padStart(2, '0'));
 
   return (
@@ -87,10 +123,10 @@ export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => vo
         </div>
 
         <div className="addtx-list">
-          <button className="addtx-row" onClick={() => setCategoryOpen(true)}><span>카테고리</span><span className="muted">{categoryLabel} ›</span></button>
+          <button className="addtx-row" onClick={() => setActivePicker('category')}><span>카테고리</span><span className="muted">{categoryLabel} ›</span></button>
           <label className="addtx-row addtx-input-row"><span>거래처</span><input value={draft.merchant} onChange={event => setDraft(prev => ({ ...prev, merchant: event.target.value }))} /></label>
-          <button className="addtx-row" onClick={() => setPaymentOpen(true)}><span>결제수단</span><span className="muted">{draft.paymentMethod || '선택하세요'} ›</span></button>
-          <button className="addtx-row" onClick={() => setDateOpen(true)}><span>날짜·시간</span><span className="muted">{formatDateTime(draft.dateTime)} ›</span></button>
+          <button className="addtx-row" onClick={() => setActivePicker('payment')}><span>결제수단</span><span className="muted">{draft.paymentMethod || '선택하세요'} ›</span></button>
+          <button className="addtx-row" onClick={() => setActivePicker('datetime')}><span>날짜·시간</span><span className="muted">{formatDateTime(parseDateFromISO(draft.dateTimeISO))} ›</span></button>
           <div className="addtx-row" style={{ alignItems: 'flex-start', flexDirection: 'column' }}>
             <span>메모·태그</span>
             <input value={draft.memo} onChange={event => setDraft(prev => ({ ...prev, memo: event.target.value }))} placeholder="메모" />
@@ -111,12 +147,20 @@ export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => vo
           <label className="addtx-row addtx-toggle-row"><span>고정 지출에 추가</span><input type="checkbox" checked={draft.addFixedExpense} onChange={event => setDraft(prev => ({ ...prev, addFixedExpense: event.target.checked }))} /></label>
         </div>
 
-        <div className="addtx-bottom"><button className="btn primary addtx-save" onClick={() => { window.alert('Saved(v0.3)'); onClose(); }}>저장</button></div>
+        <div className="addtx-bottom"><button className="btn primary addtx-save" onClick={() => {
+          const payload = buildAddTxPayload(draft);
+          if (!payload) {
+            window.alert('금액을 확인해 주세요.');
+            return;
+          }
+          onSaveDraft?.(payload);
+          onClose();
+        }}>저장</button></div>
       </div>
 
-      {categoryOpen && (
+      {activePicker === 'category' && (
         <div className="category-picker-sheet">
-          <div className="category-picker-head"><h3>카테고리 선택</h3><button className="btn" onClick={() => setCategoryOpen(false)}>✕</button></div>
+          <div className="category-picker-head"><h3>카테고리 선택</h3><button className="btn" onClick={() => setActivePicker(null)}>✕</button></div>
           <div className="category-grid">
             {majors.map(major => (
               <button key={major.id} className={`category-grid-item ${selectedMajor?.id === major.id ? 'selected' : ''}`} onClick={() => setDraft(prev => ({ ...prev, majorId: major.id, midId: '' }))}>
@@ -128,31 +172,31 @@ export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => vo
             {mids.map(mid => (
               <button key={mid.id} className={`chip ${draft.midId === mid.id ? 'active' : ''}`} onClick={() => {
                 setDraft(prev => ({ ...prev, majorId: selectedMajor?.id ?? '', midId: mid.id }));
-                setCategoryOpen(false);
+                setActivePicker(null);
               }}>{mid.name}</button>
             ))}
           </div>
         </div>
       )}
 
-      {paymentOpen && (
+      {activePicker === 'payment' && (
         <div className="payment-method-picker-sheet">
-          <div className="category-picker-head"><h3>결제수단 선택</h3><button className="btn" onClick={() => setPaymentOpen(false)}>✕</button></div>
+          <div className="category-picker-head"><h3>결제수단 선택</h3><button className="btn" onClick={() => setActivePicker(null)}>✕</button></div>
           <div className="payment-method-list">
-            {PAYMENT_METHODS.map(item => <button key={item} className={`payment-method-item ${draft.paymentMethod === item ? 'selected' : ''}`} onClick={() => { setDraft(prev => ({ ...prev, paymentMethod: item })); setPaymentOpen(false); }}>{item}</button>)}
+            {PAYMENT_METHODS.map(item => <button key={item} className={`payment-method-item ${draft.paymentMethod === item ? 'selected' : ''}`} onClick={() => { setDraft(prev => ({ ...prev, paymentMethod: item })); setActivePicker(null); }}>{item}</button>)}
           </div>
         </div>
       )}
 
-      {dateOpen && (
+      {activePicker === 'datetime' && (
         <DateWheelSheet
-          initial={draft.dateTime}
+          initial={parseDateFromISO(draft.dateTimeISO)}
           dates={dates}
           minutes={minuteStep}
-          onClose={() => setDateOpen(false)}
+          onClose={() => setActivePicker(null)}
           onApply={date => {
-            setDraft(prev => ({ ...prev, dateTime: date }));
-            setDateOpen(false);
+            setDraft(prev => ({ ...prev, dateTimeISO: date.toISOString() }));
+            setActivePicker(null);
           }}
         />
       )}
@@ -180,13 +224,15 @@ function DateWheelSheet({
   const [minute, setMinute] = useState(String(Math.round(initial.getMinutes() / 5) * 5).padStart(2, '0'));
 
   return (
-    <div className="payment-method-picker-sheet">
+    <div className="datetime-picker-sheet">
       <div className="category-picker-head"><h3>날짜·시간</h3><button className="btn" onClick={onClose}>✕</button></div>
-      <div className="wheel-row">
+      <div className="datetime-picker-list">
         <select value={dateValue} onChange={event => setDateValue(event.target.value)}>{dates.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
-        <select value={ampm} onChange={event => setAmpm(event.target.value)}><option>오전</option><option>오후</option></select>
-        <select value={hour12} onChange={event => setHour12(event.target.value)}>{Array.from({ length: 12 }, (_, idx) => String(idx + 1)).map(item => <option key={item}>{item}</option>)}</select>
-        <select value={minute} onChange={event => setMinute(event.target.value)}>{minutes.map(item => <option key={item}>{item}</option>)}</select>
+        <div className="datetime-wheel-row">
+          <select className="datetime-picker-input" value={ampm} onChange={event => setAmpm(event.target.value)}><option>오전</option><option>오후</option></select>
+          <select className="datetime-picker-input" value={hour12} onChange={event => setHour12(event.target.value)}>{Array.from({ length: 12 }, (_, idx) => String(idx + 1)).map(item => <option key={item}>{item}</option>)}</select>
+          <select className="datetime-picker-input" value={minute} onChange={event => setMinute(event.target.value)}>{minutes.map(item => <option key={item}>{item}</option>)}</select>
+        </div>
       </div>
       <button className="btn primary" onClick={() => {
         const [y, m, d] = dateValue.split('-').map(Number);
