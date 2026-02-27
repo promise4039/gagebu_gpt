@@ -474,6 +474,13 @@ tr:last-child td{border-bottom:none}
   background: linear-gradient(180deg, rgba(15,20,40,.2), rgba(15,20,40,1) 35%);
 }
 .addtx-save{width:100%;min-height:48px;font-size:16px;font-weight:600;}
+.addtx-error{
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #ff9c9c;
+  text-align: center;
+}
+
 
 /* Category picker v0.2 */
 .category-picker-sheet{
