@@ -19,6 +19,7 @@ export type AddTxPayload = {
   amount: number;
   merchant: string;
   paymentMethod: string;
+  categoryPath: string;
   majorId: string;
   midId: string;
   memo: string;

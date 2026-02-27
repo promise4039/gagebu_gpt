@@ -5,7 +5,28 @@ import { CategoryType } from '../categories/types';
 
 const PAYMENT_METHODS = ['현금', '체크카드', '신용카드', '계좌이체', '기타'];
 
-type PickerType = 'category' | 'payment' | 'datetime';
+type PickerType = 'none' | 'category' | 'payment' | 'datetime';
+
+type BuildPayloadResult = {
+  payload: AddTxPayload | null;
+  errorMessage: string | null;
+};
+
+function makeInitialDraft(): AddTxDraft {
+  return {
+    txType: 'expense',
+    amountText: '0',
+    merchant: '',
+    paymentMethod: '',
+    majorId: '',
+    midId: '',
+    memo: '',
+    tags: [],
+    excludeFromBudget: false,
+    addFixedExpense: false,
+    dateTimeISO: new Date().toISOString(),
+  };
+}
 
 function formatDateTime(date: Date): string {
   const yy = String(date.getFullYear()).slice(-2);
@@ -26,24 +47,35 @@ function parseDateFromISO(dateTimeISO: string): Date {
   return parsed;
 }
 
-function buildAddTxPayload(draft: AddTxDraft): AddTxPayload | null {
+function buildAddTxPayload(draft: AddTxDraft, categoryPath: string): BuildPayloadResult {
   const amount = Number(draft.amountText.replaceAll(',', '').trim());
+  // 금액 정책: 0 이하(음수/0)는 저장하지 않는다.
   if (!Number.isFinite(amount) || amount <= 0) {
-    return null;
+    return { payload: null, errorMessage: '금액은 0보다 큰 값을 입력해 주세요.' };
+  }
+  if (!draft.majorId || !draft.midId || !categoryPath) {
+    return { payload: null, errorMessage: '카테고리를 선택해 주세요.' };
+  }
+  if (!draft.paymentMethod) {
+    return { payload: null, errorMessage: '결제수단을 선택해 주세요.' };
   }
 
   return {
-    txType: draft.txType,
-    amount,
-    merchant: draft.merchant.trim(),
-    paymentMethod: draft.paymentMethod,
-    majorId: draft.majorId,
-    midId: draft.midId,
-    memo: draft.memo.trim(),
-    tags: draft.tags,
-    excludeFromBudget: draft.excludeFromBudget,
-    addFixedExpense: draft.addFixedExpense,
-    dateTimeISO: draft.dateTimeISO,
+    payload: {
+      txType: draft.txType,
+      amount,
+      merchant: draft.merchant.trim(),
+      paymentMethod: draft.paymentMethod,
+      categoryPath,
+      majorId: draft.majorId,
+      midId: draft.midId,
+      memo: draft.memo.trim(),
+      tags: draft.tags,
+      excludeFromBudget: draft.excludeFromBudget,
+      addFixedExpense: draft.addFixedExpense,
+      dateTimeISO: draft.dateTimeISO,
+    },
+    errorMessage: null,
   };
 }
 
@@ -60,34 +92,37 @@ function getRecentDates(): Array<{ label: string; value: string }> {
 export function AddTxSheet({
   open,
   onClose,
-  onSaveDraft,
+  onSave,
 }: {
   open: boolean;
   onClose: () => void;
-  onSaveDraft?: (payload: AddTxPayload) => void;
+  onSave?: (payload: AddTxPayload) => Promise<boolean>;
 }) {
   const categories = useCategories();
-  const [activePicker, setActivePicker] = useState<PickerType | null>(null);
+  const [activePicker, setActivePicker] = useState<PickerType>('none');
   const [tagInput, setTagInput] = useState('');
-  const [draft, setDraft] = useState<AddTxDraft>({
-    txType: 'expense',
-    amountText: '0',
-    merchant: '',
-    paymentMethod: '',
-    majorId: '',
-    midId: '',
-    memo: '',
-    tags: [],
-    excludeFromBudget: false,
-    addFixedExpense: false,
-    dateTimeISO: new Date().toISOString(),
-  });
+  const [draft, setDraft] = useState<AddTxDraft>(makeInitialDraft());
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const majors = categories.majorsByType[draft.txType] ?? [];
   const selectedMajor = majors.find(major => major.id === draft.majorId) ?? majors[0];
   const mids = selectedMajor ? categories.midsByMajorId[selectedMajor.id] ?? [] : [];
   const selectedMid = mids.find(mid => mid.id === draft.midId);
   const categoryLabel = selectedMajor && selectedMid ? `${selectedMajor.name} > ${selectedMid.name}` : '선택하세요';
+  const categoryPath = selectedMajor && selectedMid ? `${selectedMajor.name}/${selectedMid.name}` : '';
+
+  function handleCloseSheet() {
+    setActivePicker('none');
+    setErrorMessage(null);
+    onClose();
+  }
+
+  function resetDraftState() {
+    setDraft(makeInitialDraft());
+    setTagInput('');
+    setErrorMessage(null);
+    setActivePicker('none');
+  }
 
   React.useEffect(() => {
     if (!open) return;
@@ -110,7 +145,7 @@ export function AddTxSheet({
   return (
     <div className="addtx-overlay">
       <div className="addtx-sheet">
-        <div className="addtx-head"><button className="btn" onClick={onClose}>✕</button></div>
+        <div className="addtx-head"><button className="btn" onClick={handleCloseSheet}>✕</button></div>
         <div className="addtx-amount"><input value={draft.amountText} onChange={event => setDraft(prev => ({ ...prev, amountText: event.target.value }))} /></div>
         <div className="muted" style={{ textAlign: 'center' }}>{amountDisplay}</div>
 
@@ -147,20 +182,28 @@ export function AddTxSheet({
           <label className="addtx-row addtx-toggle-row"><span>고정 지출에 추가</span><input type="checkbox" checked={draft.addFixedExpense} onChange={event => setDraft(prev => ({ ...prev, addFixedExpense: event.target.checked }))} /></label>
         </div>
 
-        <div className="addtx-bottom"><button className="btn primary addtx-save" onClick={() => {
-          const payload = buildAddTxPayload(draft);
+        <div className="addtx-bottom">
+          {errorMessage && <p className="addtx-error">{errorMessage}</p>}
+          <button className="btn primary addtx-save" onClick={async () => {
+          const { payload, errorMessage: nextError } = buildAddTxPayload(draft, categoryPath);
           if (!payload) {
-            window.alert('금액을 확인해 주세요.');
+            setErrorMessage(nextError);
             return;
           }
-          onSaveDraft?.(payload);
-          onClose();
-        }}>저장</button></div>
+          const saved = onSave ? await onSave(payload) : true;
+          if (!saved) {
+            setErrorMessage('거래 저장에 실패했습니다. 다시 시도해 주세요.');
+            return;
+          }
+          resetDraftState();
+          handleCloseSheet();
+        }}>저장</button>
+        </div>
       </div>
 
       {activePicker === 'category' && (
         <div className="category-picker-sheet">
-          <div className="category-picker-head"><h3>카테고리 선택</h3><button className="btn" onClick={() => setActivePicker(null)}>✕</button></div>
+          <div className="category-picker-head"><h3>카테고리 선택</h3><button className="btn" onClick={() => setActivePicker('none')}>✕</button></div>
           <div className="category-grid">
             {majors.map(major => (
               <button key={major.id} className={`category-grid-item ${selectedMajor?.id === major.id ? 'selected' : ''}`} onClick={() => setDraft(prev => ({ ...prev, majorId: major.id, midId: '' }))}>
@@ -172,7 +215,7 @@ export function AddTxSheet({
             {mids.map(mid => (
               <button key={mid.id} className={`chip ${draft.midId === mid.id ? 'active' : ''}`} onClick={() => {
                 setDraft(prev => ({ ...prev, majorId: selectedMajor?.id ?? '', midId: mid.id }));
-                setActivePicker(null);
+                setActivePicker('none');
               }}>{mid.name}</button>
             ))}
           </div>
@@ -181,9 +224,9 @@ export function AddTxSheet({
 
       {activePicker === 'payment' && (
         <div className="payment-method-picker-sheet">
-          <div className="category-picker-head"><h3>결제수단 선택</h3><button className="btn" onClick={() => setActivePicker(null)}>✕</button></div>
+          <div className="category-picker-head"><h3>결제수단 선택</h3><button className="btn" onClick={() => setActivePicker('none')}>✕</button></div>
           <div className="payment-method-list">
-            {PAYMENT_METHODS.map(item => <button key={item} className={`payment-method-item ${draft.paymentMethod === item ? 'selected' : ''}`} onClick={() => { setDraft(prev => ({ ...prev, paymentMethod: item })); setActivePicker(null); }}>{item}</button>)}
+            {PAYMENT_METHODS.map(item => <button key={item} className={`payment-method-item ${draft.paymentMethod === item ? 'selected' : ''}`} onClick={() => { setDraft(prev => ({ ...prev, paymentMethod: item })); setActivePicker('none'); }}>{item}</button>)}
           </div>
         </div>
       )}
@@ -193,10 +236,10 @@ export function AddTxSheet({
           initial={parseDateFromISO(draft.dateTimeISO)}
           dates={dates}
           minutes={minuteStep}
-          onClose={() => setActivePicker(null)}
+          onClose={() => setActivePicker('none')}
           onApply={date => {
             setDraft(prev => ({ ...prev, dateTimeISO: date.toISOString() }));
-            setActivePicker(null);
+            setActivePicker('none');
           }}
         />
       )}

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../app/AppContext';
-import { Tx } from '../domain/models';
+import { Card, Tx } from '../domain/models';
 import { BulkEntryModal } from '../components/BulkEntryModal';
 import { SmartFilterBar, SmartFilterPeriod } from '../components/SmartFilterBar';
 import { AddTxSheet } from '../features/addTx/AddTxSheet';
@@ -80,8 +80,45 @@ export function TransactionsPage() {
     });
   }
 
-  function handleAddTxSave(payload: AddTxPayload) {
-    console.log('[AddTx draft payload]', payload);
+  function resolveCardId(paymentMethod: string): string {
+    const byName = app.cards.find(card => card.name === paymentMethod);
+    if (byName) return byName.id;
+
+    const typeByMethod: Record<string, Card['type']> = {
+      현금: 'cash',
+      체크카드: 'debit',
+      신용카드: 'credit',
+      계좌이체: 'account',
+    };
+    const cardType = typeByMethod[paymentMethod];
+    if (!cardType) return app.cards[0]?.id ?? '';
+
+    return app.cards.find(card => card.type === cardType)?.id ?? app.cards[0]?.id ?? '';
+  }
+
+  async function handleAddTxSave(payload: AddTxPayload): Promise<boolean> {
+    const date = payload.dateTimeISO.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return false;
+    }
+
+    const normalizedAmount = payload.txType === 'income' ? -payload.amount : payload.amount;
+    const tx: Tx = {
+      id: 'tx_' + crypto.randomUUID(),
+      date,
+      cardId: resolveCardId(payload.paymentMethod),
+      category: payload.categoryPath,
+      categoryId: app.categoryIdByPath[payload.categoryPath] ?? undefined,
+      amount: normalizedAmount,
+      installments: 1,
+      feeMode: 'free',
+      feeRate: 0,
+      memo: payload.memo || payload.merchant,
+      tags: payload.tags,
+    };
+
+    await app.upsertTx(tx);
+    return true;
   }
 
   async function saveEdit(t: Tx) {
@@ -139,7 +176,7 @@ export function TransactionsPage() {
       </div>
 
       <button className="add-tx-fab" onClick={() => setAddTxOpen(true)} aria-label="Add Transaction">+</button>
-      <AddTxSheet open={addTxOpen} onClose={() => setAddTxOpen(false)} onSaveDraft={handleAddTxSave} />
+      <AddTxSheet open={addTxOpen} onClose={() => setAddTxOpen(false)} onSave={handleAddTxSave} />
       <BulkEntryModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
   );
