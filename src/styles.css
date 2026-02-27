@@ -552,3 +552,12 @@ tr:last-child td{border-bottom:none}
 .payment-method-item.selected{
   background: rgba(115,125,255,.2);
 }
+
+/* AddTx v0.3 extras */
+.addtx-amount input{width:100%;text-align:center;border:0;background:transparent;color:var(--text);}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.04);color:var(--text)}
+.chip.active{background:rgba(115,125,255,.25);border-color:rgba(115,125,255,.6)}
+.chip-x{border:0;background:transparent;color:var(--text);cursor:pointer;padding:0}
+.wheel-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin:12px 0}
+.wheel-row select{min-height:44px}

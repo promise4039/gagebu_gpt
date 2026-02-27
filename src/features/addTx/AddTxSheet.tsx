@@ -1,0 +1,200 @@
+import React, { useMemo, useState } from 'react';
+import { useCategories } from '../categories/useCategories';
+import { AddTxDraft } from './types';
+import { CategoryType } from '../categories/types';
+
+const PAYMENT_METHODS = ['현금', '체크카드', '신용카드', '계좌이체', '기타'];
+
+function formatDateTime(date: Date): string {
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hours = date.getHours();
+  const ampm = hours < 12 ? '오전' : '오후';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  return `${yy}년 ${mm}월 ${dd}일 | ${ampm} ${String(hour12).padStart(2, '0')}:${minute}`;
+}
+
+function getRecentDates(): Array<{ label: string; value: string }> {
+  return Array.from({ length: 14 }, (_, idx) => {
+    const d = new Date();
+    d.setDate(d.getDate() - idx);
+    const value = d.toISOString().slice(0, 10);
+    const label = idx === 0 ? '오늘' : idx === 1 ? '어제' : `${d.getMonth() + 1}/${d.getDate()}`;
+    return { label, value };
+  });
+}
+
+export function AddTxSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const categories = useCategories();
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [draft, setDraft] = useState<AddTxDraft>({
+    txType: 'expense',
+    amountText: '0',
+    merchant: '',
+    paymentMethod: '',
+    majorId: '',
+    midId: '',
+    memo: '',
+    tags: [],
+    excludeFromBudget: false,
+    addFixedExpense: false,
+    dateTime: new Date(),
+  });
+
+  const majors = categories.majorsByType[draft.txType] ?? [];
+  const selectedMajor = majors.find(major => major.id === draft.majorId) ?? majors[0];
+  const mids = selectedMajor ? categories.midsByMajorId[selectedMajor.id] ?? [] : [];
+  const selectedMid = mids.find(mid => mid.id === draft.midId);
+  const categoryLabel = selectedMajor && selectedMid ? `${selectedMajor.name} > ${selectedMid.name}` : '선택하세요';
+
+  React.useEffect(() => {
+    if (!open) return;
+    if (!selectedMajor && majors[0]) {
+      setDraft(prev => ({ ...prev, majorId: majors[0].id, midId: '' }));
+    }
+  }, [open, selectedMajor, majors]);
+
+  const amountDisplay = useMemo(() => {
+    const n = Number(draft.amountText.replaceAll(',', ''));
+    if (!Number.isFinite(n)) return '0원';
+    return `${new Intl.NumberFormat('ko-KR').format(n)}원`;
+  }, [draft.amountText]);
+
+  if (!open) return null;
+
+  const dates = getRecentDates();
+  const dateValue = draft.dateTime.toISOString().slice(0, 10);
+  const minuteStep = Array.from({ length: 12 }, (_, idx) => String(idx * 5).padStart(2, '0'));
+
+  return (
+    <div className="addtx-overlay">
+      <div className="addtx-sheet">
+        <div className="addtx-head"><button className="btn" onClick={onClose}>✕</button></div>
+        <div className="addtx-amount"><input value={draft.amountText} onChange={event => setDraft(prev => ({ ...prev, amountText: event.target.value }))} /></div>
+        <div className="muted" style={{ textAlign: 'center' }}>{amountDisplay}</div>
+
+        <div className="addtx-segment">
+          {(['income', 'expense', 'transfer'] as CategoryType[]).map(type => (
+            <button key={type} className={`tab ${draft.txType === type ? 'active' : ''}`} onClick={() => setDraft(prev => ({ ...prev, txType: type, majorId: '', midId: '' }))}>
+              {type === 'income' ? '수입' : type === 'expense' ? '지출' : '이체'}
+            </button>
+          ))}
+        </div>
+
+        <div className="addtx-list">
+          <button className="addtx-row" onClick={() => setCategoryOpen(true)}><span>카테고리</span><span className="muted">{categoryLabel} ›</span></button>
+          <label className="addtx-row addtx-input-row"><span>거래처</span><input value={draft.merchant} onChange={event => setDraft(prev => ({ ...prev, merchant: event.target.value }))} /></label>
+          <button className="addtx-row" onClick={() => setPaymentOpen(true)}><span>결제수단</span><span className="muted">{draft.paymentMethod || '선택하세요'} ›</span></button>
+          <button className="addtx-row" onClick={() => setDateOpen(true)}><span>날짜·시간</span><span className="muted">{formatDateTime(draft.dateTime)} ›</span></button>
+          <div className="addtx-row" style={{ alignItems: 'flex-start', flexDirection: 'column' }}>
+            <span>메모·태그</span>
+            <input value={draft.memo} onChange={event => setDraft(prev => ({ ...prev, memo: event.target.value }))} placeholder="메모" />
+            <div className="row" style={{ marginTop: 8 }}>
+              <input value={tagInput} onChange={event => setTagInput(event.target.value)} placeholder="태그" />
+              <button className="btn" onClick={() => {
+                const next = tagInput.trim();
+                if (!next || draft.tags.includes(next)) return;
+                setDraft(prev => ({ ...prev, tags: [...prev.tags, next] }));
+                setTagInput('');
+              }}>+추가</button>
+            </div>
+            <div className="chip-wrap">
+              {draft.tags.map(tag => <span key={tag} className="chip">{tag}<button className="chip-x" onClick={() => setDraft(prev => ({ ...prev, tags: prev.tags.filter(item => item !== tag) }))}>×</button></span>)}
+            </div>
+          </div>
+          <label className="addtx-row addtx-toggle-row"><span>예산에서 제외</span><input type="checkbox" checked={draft.excludeFromBudget} onChange={event => setDraft(prev => ({ ...prev, excludeFromBudget: event.target.checked }))} /></label>
+          <label className="addtx-row addtx-toggle-row"><span>고정 지출에 추가</span><input type="checkbox" checked={draft.addFixedExpense} onChange={event => setDraft(prev => ({ ...prev, addFixedExpense: event.target.checked }))} /></label>
+        </div>
+
+        <div className="addtx-bottom"><button className="btn primary addtx-save" onClick={() => { window.alert('Saved(v0.3)'); onClose(); }}>저장</button></div>
+      </div>
+
+      {categoryOpen && (
+        <div className="category-picker-sheet">
+          <div className="category-picker-head"><h3>카테고리 선택</h3><button className="btn" onClick={() => setCategoryOpen(false)}>✕</button></div>
+          <div className="category-grid">
+            {majors.map(major => (
+              <button key={major.id} className={`category-grid-item ${selectedMajor?.id === major.id ? 'selected' : ''}`} onClick={() => setDraft(prev => ({ ...prev, majorId: major.id, midId: '' }))}>
+                <span className="icon">{major.icon}</span><span>{major.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="chip-wrap" style={{ marginTop: 12 }}>
+            {mids.map(mid => (
+              <button key={mid.id} className={`chip ${draft.midId === mid.id ? 'active' : ''}`} onClick={() => {
+                setDraft(prev => ({ ...prev, majorId: selectedMajor?.id ?? '', midId: mid.id }));
+                setCategoryOpen(false);
+              }}>{mid.name}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {paymentOpen && (
+        <div className="payment-method-picker-sheet">
+          <div className="category-picker-head"><h3>결제수단 선택</h3><button className="btn" onClick={() => setPaymentOpen(false)}>✕</button></div>
+          <div className="payment-method-list">
+            {PAYMENT_METHODS.map(item => <button key={item} className={`payment-method-item ${draft.paymentMethod === item ? 'selected' : ''}`} onClick={() => { setDraft(prev => ({ ...prev, paymentMethod: item })); setPaymentOpen(false); }}>{item}</button>)}
+          </div>
+        </div>
+      )}
+
+      {dateOpen && (
+        <DateWheelSheet
+          initial={draft.dateTime}
+          dates={dates}
+          minutes={minuteStep}
+          onClose={() => setDateOpen(false)}
+          onApply={date => {
+            setDraft(prev => ({ ...prev, dateTime: date }));
+            setDateOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function DateWheelSheet({
+  initial,
+  dates,
+  minutes,
+  onClose,
+  onApply,
+}: {
+  initial: Date;
+  dates: Array<{ label: string; value: string }>;
+  minutes: string[];
+  onClose: () => void;
+  onApply: (date: Date) => void;
+}) {
+  const initHours = initial.getHours();
+  const [dateValue, setDateValue] = useState(initial.toISOString().slice(0, 10));
+  const [ampm, setAmpm] = useState(initHours < 12 ? '오전' : '오후');
+  const [hour12, setHour12] = useState(String((initHours % 12) || 12));
+  const [minute, setMinute] = useState(String(Math.round(initial.getMinutes() / 5) * 5).padStart(2, '0'));
+
+  return (
+    <div className="payment-method-picker-sheet">
+      <div className="category-picker-head"><h3>날짜·시간</h3><button className="btn" onClick={onClose}>✕</button></div>
+      <div className="wheel-row">
+        <select value={dateValue} onChange={event => setDateValue(event.target.value)}>{dates.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+        <select value={ampm} onChange={event => setAmpm(event.target.value)}><option>오전</option><option>오후</option></select>
+        <select value={hour12} onChange={event => setHour12(event.target.value)}>{Array.from({ length: 12 }, (_, idx) => String(idx + 1)).map(item => <option key={item}>{item}</option>)}</select>
+        <select value={minute} onChange={event => setMinute(event.target.value)}>{minutes.map(item => <option key={item}>{item}</option>)}</select>
+      </div>
+      <button className="btn primary" onClick={() => {
+        const [y, m, d] = dateValue.split('-').map(Number);
+        const hourNum = Number(hour12);
+        const hh = ampm === '오후' ? (hourNum % 12) + 12 : hourNum % 12;
+        const next = new Date(y, m - 1, d, hh, Number(minute));
+        onApply(next);
+      }}>적용</button>
+    </div>
+  );
+}

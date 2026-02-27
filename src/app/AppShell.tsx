@@ -5,6 +5,8 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { CardsPage } from '../pages/CardsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { LoansPage } from '../pages/LoansPage';
+import { TransactionsPage } from '../pages/TransactionsPage';
+import { CategoriesPage } from '../features/categories/CategoriesPage';
 
 function Tab({ to, label }: { to: string; label: string }) {
   return (
@@ -36,6 +38,8 @@ export function AppShell() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/cards" element={<CardsPage />} />
           <Route path="/loans" element={<LoansPage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
 
@@ -55,6 +59,7 @@ export function AppShell() {
           <Tab to="/" label="대시보드" />
           <Tab to="/cards" label="계좌/카드" />
           <Tab to="/loans" label="대출/카드" />
+          <Tab to="/transactions" label="거래" />
           <Tab to="/settings" label="설정" />
         </div>
       </div>
