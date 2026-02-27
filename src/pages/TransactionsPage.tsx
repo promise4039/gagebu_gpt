@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import { Tx } from '../domain/models';
 import { BulkEntryModal } from '../components/BulkEntryModal';
+import { SmartFilterBar, SmartFilterPeriod } from '../components/SmartFilterBar';
 
 const fmt = new Intl.NumberFormat('ko-KR');
 type FeeMode = 'free' | 'manual';
@@ -9,15 +10,49 @@ type FeeMode = 'free' | 'manual';
 export function TransactionsPage() {
   const app = useApp();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [period, setPeriod] = useState<SmartFilterPeriod>('all');
 
   const rows = useMemo(() => {
     return [...app.tx].sort((a, b) => b.date.localeCompare(a.date));
   }, [app.tx]);
 
+  const filteredRows = useMemo(() => {
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+    const query = searchText.trim().toLowerCase();
+
+    return rows.filter(t => {
+      const dateMatches =
+        period === 'all'
+          ? true
+          : period === 'this_month'
+            ? t.date.startsWith(thisMonth)
+            : t.date.startsWith(lastMonth);
+
+      if (!dateMatches) return false;
+      if (!query) return true;
+
+      const withOptionalFields = t as Tx & {
+        merchant?: string;
+        raw?: string;
+        original?: string;
+      };
+      const merchant = withOptionalFields.merchant?.trim();
+      const fallbackText = merchant
+        ? `${merchant} ${t.memo}`
+        : `${t.memo} ${withOptionalFields.original ?? ''} ${withOptionalFields.raw ?? ''}`;
+
+      return fallbackText.toLowerCase().includes(query);
+    });
+  }, [period, rows, searchText]);
+
   const [editing, setEditing] = useState<Record<string, any>>({});
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
-  const checkedAll = rows.length > 0 && checked.size === rows.length;
+  const checkedAll = filteredRows.length > 0 && filteredRows.every(t => checked.has(t.id));
 
   function toggle(id: string) {
     setChecked(prev => {
@@ -94,8 +129,23 @@ export function TransactionsPage() {
 
         <div className="divider" />
 
-        {rows.length === 0 ? (
-          <p className="muted">거래가 없어.</p>
+        <div className="smart-filter-wrap">
+          <SmartFilterBar
+            searchText={searchText}
+            period={period}
+            onSearchTextChange={setSearchText}
+            onPeriodChange={setPeriod}
+            onClear={() => {
+              setSearchText('');
+              setPeriod('all');
+            }}
+          />
+        </div>
+
+        <div className="divider" />
+
+        {filteredRows.length === 0 ? (
+          <p className="muted">조건에 맞는 거래가 없어.</p>
         ) : (
           <div className="table-scroll">
             <table>
@@ -104,7 +154,7 @@ export function TransactionsPage() {
                   <th style={{width: 44}}>
                     <input type="checkbox" checked={checkedAll} onChange={() => {
                       if (checkedAll) setChecked(new Set());
-                      else setChecked(new Set(rows.map(t => t.id)));
+                      else setChecked(new Set(filteredRows.map(t => t.id)));
                     }} />
                   </th>
                   <th style={{width: 110}}>날짜</th>
@@ -116,7 +166,7 @@ export function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(t => {
+                {filteredRows.map(t => {
                   const card = app.cards.find(c => c.id === t.cardId);
                   const isEditing = !!editing[t.id];
                   const d = editing[t.id];
