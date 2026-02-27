@@ -5,6 +5,7 @@ import { Tx } from '../domain/models';
 import { BulkEntryModal } from '../components/BulkEntryModal';
 import { SmartFilterBar, SmartFilterPeriod } from '../components/SmartFilterBar';
 import { AddTxSheet } from '../features/addTx/AddTxSheet';
+import { AddTxPayload } from '../features/addTx/types';
 
 const fmt = new Intl.NumberFormat('ko-KR');
 type FeeMode = 'free' | 'manual';
@@ -79,6 +80,10 @@ export function TransactionsPage() {
     });
   }
 
+  function handleAddTxSave(payload: AddTxPayload) {
+    console.log('[AddTx draft payload]', payload);
+  }
+
   async function saveEdit(t: Tx) {
     const d = editing[t.id];
     if (!d) return;
@@ -134,7 +139,7 @@ export function TransactionsPage() {
       </div>
 
       <button className="add-tx-fab" onClick={() => setAddTxOpen(true)} aria-label="Add Transaction">+</button>
-      <AddTxSheet open={addTxOpen} onClose={() => setAddTxOpen(false)} />
+      <AddTxSheet open={addTxOpen} onClose={() => setAddTxOpen(false)} onSaveDraft={handleAddTxSave} />
       <BulkEntryModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
   );

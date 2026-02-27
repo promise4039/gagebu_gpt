@@ -11,5 +11,19 @@ export type AddTxDraft = {
   tags: string[];
   excludeFromBudget: boolean;
   addFixedExpense: boolean;
-  dateTime: Date;
+  dateTimeISO: string;
+};
+
+export type AddTxPayload = {
+  txType: CategoryType;
+  amount: number;
+  merchant: string;
+  paymentMethod: string;
+  majorId: string;
+  midId: string;
+  memo: string;
+  tags: string[];
+  excludeFromBudget: boolean;
+  addFixedExpense: boolean;
+  dateTimeISO: string;
 };

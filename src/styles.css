@@ -561,3 +561,30 @@ tr:last-child td{border-bottom:none}
 .chip-x{border:0;background:transparent;color:var(--text);cursor:pointer;padding:0}
 .wheel-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin:12px 0}
 .wheel-row select{min-height:44px}
+
+/* DateTime picker v0.4 */
+.datetime-picker-sheet{
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 16, 34, .98);
+  z-index: 70;
+  padding: 16px;
+  overflow: auto;
+}
+.datetime-picker-list{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.datetime-wheel-row{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.datetime-picker-input{
+  min-height: 44px;
+}
