@@ -521,3 +521,34 @@ tr:last-child td{border-bottom:none}
 @media (max-width: 420px){
   .category-grid{grid-template-columns: repeat(3, minmax(0, 1fr));}
 }
+
+/* Payment method picker v0.2 */
+.payment-method-picker-sheet{
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 16, 34, .98);
+  z-index: 70;
+  padding: 16px;
+  overflow: auto;
+}
+.payment-method-list{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.payment-method-item{
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  padding: 14px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+.payment-method-item:last-child{border-bottom: 0;}
+.payment-method-item.selected{
+  background: rgba(115,125,255,.2);
+}

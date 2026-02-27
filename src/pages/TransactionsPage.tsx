@@ -18,6 +18,7 @@ type CategoryMap = Record<TxType, CategoryOption[]>;
 type AddTxDraft = {
   txType: TxType;
   categories: Record<TxType, string>;
+  paymentMethodId: string;
   merchant: string;
   memoTags: string;
   excludeFromBudget: boolean;
@@ -91,6 +92,7 @@ export function TransactionsPage() {
   const [period, setPeriod] = useState<SmartFilterPeriod>('all');
   const [addTxOpen, setAddTxOpen] = useState(false);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [paymentMethodPickerOpen, setPaymentMethodPickerOpen] = useState(false);
   const [amountInputMode, setAmountInputMode] = useState(false);
   const [amountText, setAmountText] = useState('0');
   const [addTxDraft, setAddTxDraft] = useState<AddTxDraft>({
@@ -100,6 +102,7 @@ export function TransactionsPage() {
       expense: '',
       transfer: '',
     },
+    paymentMethodId: '',
     merchant: '',
     memoTags: '',
     excludeFromBudget: false,
@@ -174,6 +177,7 @@ export function TransactionsPage() {
   function closeAddTx() {
     setAddTxOpen(false);
     setCategoryPickerOpen(false);
+    setPaymentMethodPickerOpen(false);
     setAmountInputMode(false);
   }
 
@@ -192,6 +196,19 @@ export function TransactionsPage() {
     const parsedAmount = Number(amountText.replaceAll(',', '').trim());
     if (!Number.isFinite(parsedAmount)) return '0원';
     return `${fmt.format(parsedAmount)}원`;
+  }
+
+  function selectedPaymentMethodName() {
+    const selectedCard = app.cards.find(card => card.id === addTxDraft.paymentMethodId);
+    return selectedCard?.name ?? '선택하세요';
+  }
+
+  function selectPaymentMethod(cardId: string) {
+    setAddTxDraft(prev => ({
+      ...prev,
+      paymentMethodId: cardId,
+    }));
+    setPaymentMethodPickerOpen(false);
   }
 
   function cancelEdit(id: string) {
@@ -399,9 +416,9 @@ export function TransactionsPage() {
                 <input value={addTxDraft.merchant} onChange={e => setAddTxDraft(prev => ({ ...prev, merchant: e.target.value }))} placeholder="입력" />
               </label>
 
-              <button className="addtx-row" onClick={() => alert('Not implemented')}>
+              <button className="addtx-row" onClick={() => setPaymentMethodPickerOpen(true)}>
                 <span>결제수단</span>
-                <span className="muted">선택하세요 ›</span>
+                <span className="muted">{selectedPaymentMethodName()} ›</span>
               </button>
 
               <button className="addtx-row" onClick={() => alert('Not implemented')}>
@@ -462,6 +479,31 @@ export function TransactionsPage() {
                     >
                       <span className="icon" aria-hidden>{option.icon}</span>
                       <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {paymentMethodPickerOpen && (
+            <div className="payment-method-picker-sheet" role="dialog" aria-label="결제수단 선택">
+              <div className="category-picker-head">
+                <h3>결제수단 선택</h3>
+                <button className="btn" onClick={() => setPaymentMethodPickerOpen(false)} aria-label="닫기">✕</button>
+              </div>
+
+              <div className="payment-method-list">
+                {app.cards.map(card => {
+                  const isSelected = addTxDraft.paymentMethodId === card.id;
+                  return (
+                    <button
+                      key={card.id}
+                      className={`payment-method-item ${isSelected ? 'selected' : ''}`}
+                      onClick={() => selectPaymentMethod(card.id)}
+                    >
+                      <span>{card.name}</span>
+                      {isSelected && <span aria-hidden>✓</span>}
                     </button>
                   );
                 })}
