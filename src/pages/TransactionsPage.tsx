@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../app/AppContext';
 import { Tx } from '../domain/models';
 import { BulkEntryModal } from '../components/BulkEntryModal';
+import { QuickAddSheet } from '../components/QuickAddSheet';
 import { SmartFilterBar, SmartFilterPeriod } from '../components/SmartFilterBar';
 
 const fmt = new Intl.NumberFormat('ko-KR');
@@ -10,6 +11,7 @@ type FeeMode = 'free' | 'manual';
 export function TransactionsPage() {
   const app = useApp();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [period, setPeriod] = useState<SmartFilterPeriod>('all');
 
@@ -228,6 +230,11 @@ export function TransactionsPage() {
       </div>
 
       <BulkEntryModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+
+      <button className="quick-add-fab" onClick={() => setQuickAddOpen(true)} aria-label="Quick add transaction">
+        +
+      </button>
     </div>
   );
 }
