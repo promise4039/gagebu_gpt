@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useCategories } from '../categories/useCategories';
-import { AddTxDraft, AddTxPayload } from './types';
+import { AddTxDraft, AddTxPayload, AddTxSaveResult } from './types';
 import { CategoryType } from '../categories/types';
 
 const PAYMENT_METHODS = ['현금', '체크카드', '신용카드', '계좌이체', '기타'];
@@ -96,13 +96,14 @@ export function AddTxSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave?: (payload: AddTxPayload) => Promise<boolean>;
+  onSave?: (payload: AddTxPayload) => Promise<AddTxSaveResult>;
 }) {
   const categories = useCategories();
   const [activePicker, setActivePicker] = useState<PickerType>('none');
   const [tagInput, setTagInput] = useState('');
   const [draft, setDraft] = useState<AddTxDraft>(makeInitialDraft());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const majors = categories.majorsByType[draft.txType] ?? [];
   const selectedMajor = majors.find(major => major.id === draft.majorId) ?? majors[0];
@@ -112,6 +113,7 @@ export function AddTxSheet({
   const categoryPath = selectedMajor && selectedMid ? `${selectedMajor.name}/${selectedMid.name}` : '';
 
   function handleCloseSheet() {
+    if (isSaving) return;
     setActivePicker('none');
     setErrorMessage(null);
     onClose();
@@ -122,6 +124,7 @@ export function AddTxSheet({
     setTagInput('');
     setErrorMessage(null);
     setActivePicker('none');
+    setIsSaving(false);
   }
 
   React.useEffect(() => {
@@ -184,20 +187,23 @@ export function AddTxSheet({
 
         <div className="addtx-bottom">
           {errorMessage && <p className="addtx-error">{errorMessage}</p>}
-          <button className="btn primary addtx-save" onClick={async () => {
+          <button className="btn primary addtx-save" disabled={isSaving} onClick={async () => {
+          if (isSaving) return;
           const { payload, errorMessage: nextError } = buildAddTxPayload(draft, categoryPath);
           if (!payload) {
             setErrorMessage(nextError);
             return;
           }
-          const saved = onSave ? await onSave(payload) : true;
-          if (!saved) {
-            setErrorMessage('거래 저장에 실패했습니다. 다시 시도해 주세요.');
+          setIsSaving(true);
+          const saveResult = onSave ? await onSave(payload) : { ok: true };
+          if (!saveResult.ok) {
+            setErrorMessage(saveResult.errorMessage ?? '거래 저장에 실패했습니다. 다시 시도해 주세요.');
+            setIsSaving(false);
             return;
           }
           resetDraftState();
           handleCloseSheet();
-        }}>저장</button>
+        }}>{isSaving ? '저장 중...' : '저장'}</button>
         </div>
       </div>
 
