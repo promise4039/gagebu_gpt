@@ -28,3 +28,8 @@ export type AddTxPayload = {
   addFixedExpense: boolean;
   dateTimeISO: string;
 };
+
+export type AddTxSaveResult = {
+  ok: boolean;
+  errorMessage?: string;
+};

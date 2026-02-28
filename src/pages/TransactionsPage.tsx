@@ -5,7 +5,7 @@ import { Card, Tx } from '../domain/models';
 import { BulkEntryModal } from '../components/BulkEntryModal';
 import { SmartFilterBar, SmartFilterPeriod } from '../components/SmartFilterBar';
 import { AddTxSheet } from '../features/addTx/AddTxSheet';
-import { AddTxPayload } from '../features/addTx/types';
+import { AddTxPayload, AddTxSaveResult } from '../features/addTx/types';
 
 const fmt = new Intl.NumberFormat('ko-KR');
 type FeeMode = 'free' | 'manual';
@@ -96,29 +96,39 @@ export function TransactionsPage() {
     return app.cards.find(card => card.type === cardType)?.id ?? app.cards[0]?.id ?? '';
   }
 
-  async function handleAddTxSave(payload: AddTxPayload): Promise<boolean> {
+  async function handleAddTxSave(payload: AddTxPayload): Promise<AddTxSaveResult> {
     const date = payload.dateTimeISO.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return false;
+      return { ok: false, errorMessage: '날짜 형식이 올바르지 않습니다.' };
+    }
+
+    const cardId = resolveCardId(payload.paymentMethod);
+    if (!cardId) {
+      return { ok: false, errorMessage: '결제수단에 연결된 계좌/카드를 찾지 못했습니다.' };
     }
 
     const normalizedAmount = payload.txType === 'income' ? -payload.amount : payload.amount;
     const tx: Tx = {
       id: 'tx_' + crypto.randomUUID(),
       date,
-      cardId: resolveCardId(payload.paymentMethod),
+      cardId,
       category: payload.categoryPath,
       categoryId: app.categoryIdByPath[payload.categoryPath] ?? undefined,
       amount: normalizedAmount,
       installments: 1,
       feeMode: 'free',
       feeRate: 0,
-      memo: payload.memo || payload.merchant,
+      memo: payload.memo.trim() || payload.merchant.trim(),
       tags: payload.tags,
     };
 
-    await app.upsertTx(tx);
-    return true;
+    try {
+      await app.upsertTx(tx);
+      return { ok: true };
+    } catch (error) {
+      console.error('ADD_TX_SAVE_FAILED', error);
+      return { ok: false, errorMessage: '거래 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' };
+    }
   }
 
   async function saveEdit(t: Tx) {
